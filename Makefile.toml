@@ -1,0 +1,33 @@
+[tasks.clean]
+clear = true
+script = """
+cargo clean
+rm -rf ./deploy/
+"""
+
+[tasks.test]
+clear = true
+script = """
+#!/usr/bin/env bash
+
+set -e
+DEFAULT_ARCH="$(rustc -vV | awk '/host:/ {print $2}')"
+cargo test --target $DEFAULT_ARCH
+"""
+
+[tasks.build]
+args = ["build", "--target", "wasm32-unknown-unknown", "--release"]
+command = "cargo"
+
+# Prepare for prod deployment by optimizing the WASM file for size
+[tasks.optimize]
+dependencies = ["build"]
+script = """
+#!/usr/bin/env bash
+
+set -e
+WASM_PATH="$(find ./target/wasm32-unknown-unknown/release -maxdepth 1 -name "*.wasm")"
+
+mkdir -p ./deploy/
+wasm-tools strip "$WASM_PATH" > "./deploy/$(basename $WASM_PATH)"
+"""
